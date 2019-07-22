@@ -41,60 +41,76 @@ func die(msg string, err error) {
 }
 
 func main() {
-	oFile := flag.String("f", "", "JSON file name")
 	oVersion := flag.Bool("v", false, "Prints the application version and exit")
+	flag.Usage = func() {
+		fmt.Println("jsnschema-custom-validator <file-1.schema.json> <file-2.schema.json> ... <file-N.schema.json>")
+	}
 	flag.Parse()
 
 	if *oVersion {
 		fmt.Println(version.Version)
 		os.Exit(0)
 	}
-	if *oFile == "" {
-		die("-f flag not provided or file name missing", nil)
+
+	fileList := os.Args[1:]
+	if len(fileList) < 1 {
+		die("No input files", nil)
 	}
 
-	fmt.Println("Application started")
-	fmt.Printf("Trying to open file '%s'\r\n", *oFile)
-	hFile, err := os.Open(*oFile)
+	failed := false
+	for _, f := range fileList {
+		fmt.Println("Validating file: " + f)
+		err, errMap := validateFile(f)
+		if err != nil {
+			failed = true
+			fmt.Printf("Failed to process file '%s': %s\r\n", f, err.Error())
+			continue
+		}
+		if len(errMap) != 0 {
+			failed = true
+			for field, errs := range errMap {
+				fmt.Println("Field: ", field)
+				for _, e := range errs {
+					fmt.Println("\t-", e.Error())
+				}
+			}
+		}
+	}
+
+	if failed {
+		os.Exit(1)
+	}
+}
+
+func validateFile(fileName string) (error, map[string][]error) {
+	hFile, err := os.Open(fileName)
 	if err != nil {
-		die("unable to open file "+*oFile, err)
+		return errors.Wrap(err, "unable to open file "+fileName), nil
 	}
 
 	var decoded map[string]interface{}
 	err = json.NewDecoder(hFile).Decode(&decoded)
 	if err != nil {
-		die("unable to decode file "+*oFile, err)
+		return errors.Wrap(err, "unable to decode file "+fileName), nil
 	}
 
 	err = validateRoot(decoded)
 	if err != nil {
-		die("unable to validate root element", err)
+		return errors.Wrap(err, "unable to validate root element"), nil
 	}
-	fmt.Println("Root element is correct")
 
 	errorsMap := make(map[string][]error)
 	if props, ok := decoded[ElProperties].(map[string]interface{}); ok {
 		validateProperties(props, "root", errorsMap)
 	} else {
-		fmt.Println("incorrect root properties")
-		os.Exit(1)
+		return errors.New("unable to decode root properties"), nil
 	}
 
 	if len(errorsMap) == 0 {
-		fmt.Println("Document is valid")
-		os.Exit(0)
+		return nil, nil
 	}
 
-	fmt.Println("Document has some errors")
-
-	for eName, errs := range errorsMap {
-		fmt.Println("FIELD: ", eName)
-		for _, e := range errs {
-			fmt.Println("\t-", e.Error())
-		}
-		fmt.Println("")
-	}
-	os.Exit(1)
+	return nil, errorsMap
 }
 
 func validateRoot(m map[string]interface{}) error {
