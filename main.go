@@ -31,15 +31,6 @@ var (
 	ErrNoExamples       = errors.New("no 'examples' element found")
 )
 
-func die(msg string, err error) {
-	if err != nil {
-		fmt.Printf("%s. Error: %s\r\n", msg, err.Error())
-	} else {
-		fmt.Println(msg)
-	}
-	os.Exit(1)
-}
-
 func main() {
 	oVersion := flag.Bool("v", false, "Prints the application version and exit")
 	flag.Usage = func() {
@@ -54,7 +45,8 @@ func main() {
 
 	fileList := os.Args[1:]
 	if len(fileList) < 1 {
-		die("No input files", nil)
+		fmt.Println("No input files")
+		os.Exit(1)
 	}
 
 	failed := false
