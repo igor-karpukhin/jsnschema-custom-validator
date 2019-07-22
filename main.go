@@ -53,8 +53,8 @@ func main() {
 		die("-f flag not provided or file name missing", nil)
 	}
 
-	fmt.Println("application started")
-	fmt.Printf("trying to open file '%s'\r\n", *oFile)
+	fmt.Println("Application started")
+	fmt.Printf("Trying to open file '%s'\r\n", *oFile)
 	hFile, err := os.Open(*oFile)
 	if err != nil {
 		die("unable to open file "+*oFile, err)
@@ -70,28 +70,31 @@ func main() {
 	if err != nil {
 		die("unable to validate root element", err)
 	}
-	fmt.Println("root element is correct")
+	fmt.Println("Root element is correct")
 
 	errorsMap := make(map[string][]error)
 	if props, ok := decoded[ElProperties].(map[string]interface{}); ok {
-		validateProperties(props, errorsMap)
+		validateProperties(props, "root", errorsMap)
 	} else {
 		fmt.Println("incorrect root properties")
-		os.Exit(-1)
+		os.Exit(1)
 	}
 
 	if len(errorsMap) == 0 {
-		fmt.Println("document is valid")
+		fmt.Println("Document is valid")
 		os.Exit(0)
 	}
 
+	fmt.Println("Document has some errors")
+
 	for eName, errs := range errorsMap {
-		fmt.Println("Field: ", eName)
+		fmt.Println("FIELD: ", eName)
 		for _, e := range errs {
 			fmt.Println("\t-", e.Error())
 		}
+		fmt.Println("")
 	}
-	os.Exit(-1)
+	os.Exit(1)
 }
 
 func validateRoot(m map[string]interface{}) error {
@@ -110,38 +113,43 @@ func validateRoot(m map[string]interface{}) error {
 }
 
 func validateProperties(m map[string]interface{},
+	fullPath string,
 	e map[string][]error) {
 	for k, v := range m {
 		if casted, ok := v.(map[string]interface{}); ok {
 			if len(casted) > 0 {
-				validateElement(k, casted, e)
+				relPath := fullPath + " - " + k
+				validateElement(k, relPath, casted, e)
 			}
 		}
 	}
 }
 
-func validateElement(eName string, m map[string]interface{}, e map[string][]error) {
+func validateElement(eName string, fullPath string, m map[string]interface{}, e map[string][]error) {
 	propsFound := false
 	for k, v := range m {
 		if strings.ToLower(k) == ElProperties {
 			if casted, ok := v.(map[string]interface{}); ok {
-				validateProperties(casted, e)
+				validateProperties(casted, fullPath, e)
 			}
 			propsFound = true
 		}
 	}
 	if !propsFound {
-		if _, ok := e[eName]; !ok {
-			e[eName] = []error{}
+		if _, ok := e[fullPath]; !ok {
+			e[fullPath] = []error{}
+		}
+		if _, ok := m[ElType]; !ok {
+			e[fullPath] = append(e[fullPath], ErrNoType)
 		}
 		if _, ok := m[ElDescription]; !ok {
-			e[eName] = append(e[eName], ErrNoDescription)
+			e[fullPath] = append(e[fullPath], ErrNoDescription)
 		}
 		if _, ok := m[ElDefault]; !ok {
-			e[eName] = append(e[eName], ErrNoDefault)
+			e[fullPath] = append(e[fullPath], ErrNoDefault)
 		}
 		if _, ok := m[ElExamples]; !ok {
-			e[eName] = append(e[eName], ErrNoExamples)
+			e[fullPath] = append(e[fullPath], ErrNoExamples)
 		}
 	}
 	return
