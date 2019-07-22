@@ -1,6 +1,7 @@
 EXECUTABLE=jsnschema-custom-validator
 VERSION=${shell git describe --tags --always}
-LDFLAGS= -s -w -X '${shell pwd}/version.Version=$(VERSION)'
+PACKAGE=github.com/igor-karpukhin/jsnschema-custom-validator
+LDFLAGS= -s -w -X '$(PACKAGE)/version.Version=$(VERSION)'
 BUILD_DIR=bin
 .PHONY: clean dep build test all
 all: dep build test
