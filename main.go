@@ -35,6 +35,7 @@ func main() {
 	oVersion := flag.Bool("v", false, "Prints the application version and exit")
 	flag.Usage = func() {
 		fmt.Println("jsnschema-custom-validator <file-1.schema.json> <file-2.schema.json> ... <file-N.schema.json>")
+		flag.PrintDefaults()
 	}
 	flag.Parse()
 

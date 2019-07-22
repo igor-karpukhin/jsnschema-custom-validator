@@ -12,6 +12,8 @@ dep:
 	dep ensure -v --vendor-only
 build:
 	mkdir -p bin/
-	CGO_ENABLED=0 GOOS=darwin go build -ldflags "$(LDFLAGS)" -a -o $(BUILD_DIR)/$(EXECUTABLE)
+	for target in "darwin" "linux" "windows" ; do \
+		CGO_ENABLED=0 GOOS=$$target go build -ldflags "$(LDFLAGS)" -a -o $(BUILD_DIR)/$(EXECUTABLE)_$$target ; \
+	done
 test:
 	go test ./...
