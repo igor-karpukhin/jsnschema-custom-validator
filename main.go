@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+//Unexported
 const (
 	ElID          = "$id"
 	ElSchema      = "$schema"
@@ -21,6 +22,7 @@ const (
 	ElExamples    = "examples"
 )
 
+//Unexported
 var (
 	ErrNoID             = errors.New("no '$id' element found")
 	ErrNoSchema         = errors.New("no '$schema' element found")
@@ -53,7 +55,7 @@ func main() {
 	failed := false
 	for _, f := range fileList {
 		fmt.Println("Validating file: " + f)
-		err, errMap := validateFile(f)
+		errMap, err := validateFile(f)
 		if err != nil {
 			failed = true
 			fmt.Printf("Failed to process file '%s': %s\r\n", f, err.Error())
@@ -75,35 +77,35 @@ func main() {
 	}
 }
 
-func validateFile(fileName string) (error, map[string][]error) {
+func validateFile(fileName string) (map[string][]error, error) {
 	hFile, err := os.Open(fileName)
 	if err != nil {
-		return errors.Wrap(err, "unable to open file "+fileName), nil
+		return nil, errors.Wrap(err, "unable to open file "+fileName)
 	}
 
 	var decoded map[string]interface{}
 	err = json.NewDecoder(hFile).Decode(&decoded)
 	if err != nil {
-		return errors.Wrap(err, "unable to decode file "+fileName), nil
+		return nil, errors.Wrap(err, "unable to decode file "+fileName)
 	}
 
 	err = validateRoot(decoded)
 	if err != nil {
-		return errors.Wrap(err, "unable to validate root element"), nil
+		return nil, errors.Wrap(err, "unable to validate root element")
 	}
 
 	errorsMap := make(map[string][]error)
 	if props, ok := decoded[ElProperties].(map[string]interface{}); ok {
 		validateProperties(props, "root", errorsMap)
 	} else {
-		return errors.New("unable to decode root properties"), nil
+		return nil, errors.New("unable to decode root properties")
 	}
 
 	if len(errorsMap) == 0 {
 		return nil, nil
 	}
 
-	return nil, errorsMap
+	return errorsMap, nil
 }
 
 func validateRoot(m map[string]interface{}) error {
